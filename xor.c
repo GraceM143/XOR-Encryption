@@ -1,22 +1,26 @@
 #include <stdio.h>
 #include <string.h>
 
-void xorEncrypt(char *message, char *key) {
+void xorEncrypt(char* message, char* key) {
     int keyLen = strlen(key);
-    for (int i = 0; message[i] != '\0'; i++) {
+	int msgLen = strlen(message);
+
+    for (int i = 0; i<msgLen; i++) {
         message[i] ^= key[i % keyLen];
     }
 }
 
 void encryptFile(const char *filename, const char *message, const char *key) {
     FILE *file = fopen(filename, "wb");
+    int msgLen = strlen(message);
+
     if (!file) {
         printf("Error opening file for writing.\n");
         return;
     }
 
-    xorEncrypt((char *)message, (char *)key);
-    fwrite(message, sizeof(char), strlen(message), file);
+    xorEncrypt((char*)message, (char*)key);
+    fwrite(message, 1, msgLen, file);
 
     fclose(file);
 }
@@ -64,7 +68,8 @@ int main() {
         char key[50];
 
         printf("Enter the string to encrypt: ");
-        fgets(message, sizeof(message), stdin);
+        scanf("%s", message);
+        // fgets(message, sizeof(message), stdin);
         message[strcspn(message, "\n")] = '\0';
 
         printf("Enter the filename to save the encrypted data: ");
