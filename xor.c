@@ -1,9 +1,10 @@
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 
-void xorEncrypt(char* message, char* key) {
+void xorEncrypt(char* message, size_t msgLen, char* key) {
     int keyLen = strlen(key);
-	int msgLen = strlen(message);
+	//int msgLen = strlen(message); dont need bc passing in
 
     for (int i = 0; i<msgLen; i++) {
         message[i] ^= key[i % keyLen];
@@ -12,14 +13,14 @@ void xorEncrypt(char* message, char* key) {
 
 void encryptFile(const char *filename, const char *message, const char *key) {
     FILE *file = fopen(filename, "wb");
-    int msgLen = strlen(message);
+    size_t msgLen = strlen(message);
 
     if (!file) {
         printf("Error opening file for writing.\n");
         return;
     }
 
-    xorEncrypt((char*)message, (char*)key);
+    xorEncrypt((char*)message, msgLen, (char*)key);
     fwrite(message, 1, msgLen, file);
 
     fclose(file);
@@ -36,21 +37,18 @@ void decryptFile(const char *filename, const char *key) {
     long fileSize = ftell(file);
     fseek(file, 0, SEEK_SET);
 
-    char *buffer = (char *)malloc((fileSize + 1) * sizeof(char));
+	size_t size = (size_t)fileSize; //unsigned interger version of the filesize
+    char *buffer = (char *)malloc((fileSize + 1) * 1);
     if (!buffer) {
         printf("Memory allocation failed.\n");
         fclose(file);
         return;
     }
 
-    fread(buffer, sizeof(char), fileSize, file);
-    buffer[fileSize] = '\0';
+    size_t read =fread(buffer, 1, size, file); //save the number of bytes read
+    xorEncrypt(buffer, read, (char *)key);
 
-    xorEncrypt(buffer, (char *)key);
-
-    for (int i = 0; buffer[i] != '\0'; i++) {
-        printf("%c", buffer[i]);
-    }
+	fwrite(buffer, 1, size, stdout);
     printf("\n");
 
     free(buffer);
