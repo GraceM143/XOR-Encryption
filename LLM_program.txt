@@ -1,0 +1,164 @@
+#include <stdio.h>
+#include <string.h>
+#include <stdlib.h>
+
+// Function to XOR encrypt/decrypt a buffer in place
+void xorEncrypt(char* data, size_t dataLen, const char* key) {
+    int keyLen = strlen(key);
+    for (size_t i = 0; i < dataLen; i++) {
+        data[i] ^= key[i % keyLen];
+    }
+}
+
+// Function to encrypt a message and save it to a file
+void encryptFile(const char* filename, char* message, const char* key) {
+    // Create a copy of the message to encrypt so we don't modify the original if needed later
+    size_t msgLen = strlen(message);
+    char* encryptedData = (char*)malloc(msgLen + 1);
+    if (!encryptedData) {
+        printf("Memory allocation failed.\n");
+        return;
+    }
+    strcpy(encryptedData, message);
+
+    // Encrypt the copy
+    xorEncrypt(encryptedData, msgLen, key);
+
+    // Open file for writing (creates if not exists, overwrites if exists)
+    FILE* file = fopen(filename, "wb");
+    if (!file) {
+        printf("Error opening file '%s' for writing.\n", filename);
+        free(encryptedData);
+        return;
+    }
+
+    // Write the encrypted data to the file
+    fwrite(encryptedData, 1, msgLen, file);
+
+    fclose(file);
+    free(encryptedData);
+    printf("Encryption successful. Data saved to '%s'.\n", filename);
+}
+
+// Function to read a file, decrypt it, and print to stdout
+void decryptFile(const char* filename, const char* key) {
+    FILE* file = fopen(filename, "rb");
+    if (!file) {
+        printf("Error: File '%s' does not exist or cannot be opened.\n", filename);
+        return;
+    }
+
+    // Get file size
+    fseek(file, 0, SEEK_END);
+    long fileSize = ftell(file);
+    fseek(file, 0, SEEK_SET);
+
+    if (fileSize <= 0) {
+        printf("Error: File is empty or invalid.\n");
+        fclose(file);
+        return;
+    }
+
+    size_t size = (size_t)fileSize;
+    char* buffer = (char*)malloc(size + 1);
+    if (!buffer) {
+        printf("Memory allocation failed.\n");
+        fclose(file);
+        return;
+    }
+
+    // Read the file content
+    size_t read = fread(buffer, 1, size, file);
+    fclose(file);
+
+    if (read == 0) {
+        printf("Error: Could not read from file.\n");
+        free(buffer);
+        return;
+    }
+
+    // Null-terminate for safety if it's text, though XOR might not produce nulls
+    buffer[read] = '\0';
+
+    // Decrypt the data
+    xorEncrypt(buffer, read, key);
+
+    // Print the decrypted message to stdout
+    printf("Decrypted message: %s\n", buffer);
+
+    free(buffer);
+}
+
+int main() {
+    char choice;
+    printf("Enter 'e' to encrypt or 'd' to decrypt: ");
+    scanf(" %c", &choice);
+
+    // Clear the input buffer after scanf to prevent issues with fgets
+    while (getchar() != '\n');
+
+    if (choice == 'e') {
+        char message;
+        char filename;
+        char key;
+
+        printf("Enter the string to encrypt: ");
+        if (!fgets(message, sizeof(message), stdin)) {
+            printf("Error reading message.\n");
+            return 1;
+        }
+        // Remove trailing newline if present
+        message[strcspn(message, "\n")] = '\0';
+
+        printf("Enter the filename to save the encrypted data: ");
+        if (!fgets(filename, sizeof(filename), stdin)) {
+            printf("Error reading filename.\n");
+            return 1;
+        }
+        filename[strcspn(filename, "\n")] = '\0';
+
+        printf("Enter the encryption key: ");
+        if (!fgets(key, sizeof(key), stdin)) {
+            printf("Error reading key.\n");
+            return 1;
+        }
+        key[strcspn(key, "\n")] = '\0';
+
+        if (strlen(message) == 0 || strlen(key) == 0) {
+            printf("Error: Message and key cannot be empty.\n");
+            return 1;
+        }
+
+        encryptFile(filename, message, key);
+
+    } else if (choice == 'd') {
+        char filename;
+        char key;
+
+        printf("Enter the filename to decrypt: ");
+        if (!fgets(filename, sizeof(filename), stdin)) {
+            printf("Error reading filename.\n");
+            return 1;
+        }
+        filename[strcspn(filename, "\n")] = '\0';
+
+        printf("Enter the decryption key: ");
+        if (!fgets(key, sizeof(key), stdin)) {
+            printf("Error reading key.\n");
+            return 1;
+        }
+        key[strcspn(key, "\n")] = '\0';
+
+        if (strlen(filename) == 0 || strlen(key) == 0) {
+            printf("Error: Filename and key cannot be empty.\n");
+            return 1;
+        }
+
+        decryptFile(filename, key);
+
+    } else {
+        printf("Invalid choice.\n");
+    }
+
+    return 0;
+}
